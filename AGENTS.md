@@ -13,7 +13,12 @@ user view.
 | `src/prefs-parse.ts` | Stored-prefs schema and validating parser. |
 | `src/prefs.ts` | localStorage-backed React store for collapse and filter state. |
 | `src/StatusGlyph.tsx` | Status glyphs and their theme-token colors. |
-| `src/ActivityList.tsx` | The list: filter bar, legend, groups, rows. |
+| `src/ActivityList.tsx` | The list root: loads threads and prefs, composes the parts below. |
+| `src/FilterBar.tsx` | Status filter chips and the glyph legend. |
+| `src/GroupSection.tsx` | One group: header with roll-up counts, thread tree or filter results. |
+| `src/ThreadRow.tsx` | One row, built from bb's own menu, title, and shortcut pieces. |
+| `src/clock.ts` | Shared wall clock; only age labels subscribe to it. |
+| `src/ui.ts` | Class-name helpers shared by the components. |
 | `app.tsx` | Registers the list slot. |
 | `server.ts` | Empty backend. bb requires a server entry. |
 | `scripts/smoke.ts` | Release gate for the model and parser. Runs without bb. |
