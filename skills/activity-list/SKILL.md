@@ -22,7 +22,7 @@ client. `bb plugin disable activity-list` brings bb's list back everywhere.
 - Pinned threads show in Pinned at the top, also by activity.
 - Each row has a status glyph. All colors come from the active theme's tokens:
   needs input (attention, pulsing, side bar), failed (destructive, side bar),
-  working (bb's own running glyph; counts in warning-text), unread (primary
+  working (bb's own running glyph; counts in success), unread (primary
   dot), and queued, background work, draft, idle (muted, told apart by shape).
 - Group headers show colored counts of the states inside, also when collapsed.
 - Chips at the top filter the list to one state.

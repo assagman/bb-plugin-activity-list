@@ -38,7 +38,7 @@ works in a running bb (sort, glyphs, menu, filter, collapse).
 ## Rules
 
 - Colors: use bb theme tokens only (`attention`, `destructive`,
-  `warning-text`, `primary`, `muted-foreground`). No fixed hues.
+  `success`, `primary`, `muted-foreground`). No fixed hues.
 - Keep bb's own running glyph for the working state.
 - Keep `src/model.ts` and `src/prefs-parse.ts` free of React and SDK runtime
   imports, so the smoke gate runs under plain Node.

@@ -24,9 +24,10 @@ const GLYPH_SIZE = 14;
 export const STATUS_TONE: Readonly<Record<StatusKind, string>> = {
   "needs-input": "text-attention",
   error: "text-destructive",
-  // warning-text is the theme's soft warning ink: the creamy yellow the user
-  // asked for on running counts, and distinct from attention in bb's palettes.
-  working: "text-warning-text",
+  // success is the one token that is green in every built-in bb theme, so a
+  // running count never shares a hue with attention (needs input) or primary
+  // (unread); a custom theme still decides its own success hue. warning-text sat next to attention's amber in the default theme.
+  working: "text-success",
   queued: "text-muted-foreground",
   background: "text-muted-foreground",
   // primary is the theme's own accent, as bb's unread dot uses it.
