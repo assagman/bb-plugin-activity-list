@@ -37,6 +37,12 @@ list. Choose "Thread list (built-in)" there, or run
 - Collapse and filter choices are per browser, in local storage. The
   `bb thread-list prefs` keys do not apply.
 
+## Contributing
+
+After you clone, run `scripts/setup-hooks` once and install the hook tools
+that [AGENTS.md](AGENTS.md) lists. Every check must pass before a push; never
+use `--no-verify`.
+
 ## License
 
 MIT

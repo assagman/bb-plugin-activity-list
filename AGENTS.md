@@ -60,6 +60,17 @@ works in a running bb (sort, glyphs, menu, filter, collapse).
 files; put repository checks in `.githooks/<hook>.d/`. Never use
 `--no-verify`.
 
+The hooks fail closed, so install their tools first: `gitleaks`,
+`markdownlint-cli2`, `shellcheck`, `shfmt`, `osv-scanner`, `semgrep`, and
+`lizard`; add `actionlint` and `zizmor` once the repository has workflows.
+`npm run lint` also lints the repository's shell scripts (`lint:sh`).
+
+| Hook | Runs |
+| --- | --- |
+| `pre-commit` | Staged secret scan, whitespace, markdownlint, Biome, shell lint |
+| `commit-msg` | Conventional subject, body, `Signed-off-by` |
+| `pre-push` | Per commit: signature, DCO, message, secrets. Per tip: workflows, osv-scanner, semgrep, lizard, then `npm ci`, lint, typecheck, build, smoke, `npm audit` |
+
 ## Known risks
 
 - The running glyph's tint reaches into bb's spinner with `[&_svg]:text-current`.
