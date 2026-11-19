@@ -1,0 +1,41 @@
+# bb Activity list
+
+A sidebar thread list for [bb](https://getbb.app) that keeps bb's look and
+adds three things:
+
+- **Sort by activity.** Projects and threads sort by their latest activity,
+  newest first, and move live as agents work. A busy sub-thread lifts its
+  parent. Empty projects go last.
+- **Colored status cues.** Each row shows its state: needs input, failed,
+  working (bb's own running glyph), queued, background work, unread, draft,
+  or idle. All colors come from the active bb theme. Rows that block on you
+  get a tinted background and a side bar.
+- **Roll-ups and filters.** Group headers count the states inside, also when
+  collapsed. Chips at the top filter the list to one state. The `?` chip
+  shows a legend.
+
+bb's thread menu, right-click menu, rename dialog, keyboard shortcuts, split
+drag, and pinned threads work as in bb's own list.
+
+## Install
+
+```sh
+npm ci --ignore-scripts
+npm run build
+bb plugin install "$PWD" --yes
+```
+
+bb picks a sidebar list per client in Settings → Appearance → Sidebar thread
+list. Choose "Thread list (built-in)" there, or run
+`bb plugin disable activity-list`, to go back to bb's list.
+
+## Limits
+
+- Organization is by project only. bb's custom sections and machine groups
+  are not shown as groups; their threads show under their project.
+- Collapse and filter choices are per browser, in local storage. The
+  `bb thread-list prefs` keys do not apply.
+
+## License
+
+MIT
