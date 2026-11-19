@@ -25,6 +25,13 @@ export const DEFAULT_PREFS: ListPrefs = {
   filter: "all",
 };
 
+/** What stored JSON may hold; untrusted, so every field stays unknown. */
+interface StoredPrefsShape {
+  collapsedGroups?: unknown;
+  collapsedThreads?: unknown;
+  filter?: unknown;
+}
+
 /** Keeps only short string ids, capped in count, so bad storage cannot bloat the list. */
 function readIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -51,11 +58,13 @@ export function parsePrefs(raw: string | null): ListPrefs {
   try {
     const value: unknown = JSON.parse(raw);
     if (typeof value !== "object" || value === null) return DEFAULT_PREFS;
-    const record = value as Record<string, unknown>;
+    // Named fields, each still unknown, so every read goes through a validator
+    // and both the type checker and the linter accept plain property access.
+    const record = value as StoredPrefsShape;
     return {
-      collapsedGroups: readIds(record["collapsedGroups"]),
-      collapsedThreads: readIds(record["collapsedThreads"]),
-      filter: readFilter(record["filter"]),
+      collapsedGroups: readIds(record.collapsedGroups),
+      collapsedThreads: readIds(record.collapsedThreads),
+      filter: readFilter(record.filter),
     };
   } catch {
     // Corrupt JSON is a recoverable state: the user only loses collapse
