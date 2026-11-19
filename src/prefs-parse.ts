@@ -53,9 +53,9 @@ export function parsePrefs(raw: string | null): ListPrefs {
     if (typeof value !== "object" || value === null) return DEFAULT_PREFS;
     const record = value as Record<string, unknown>;
     return {
-      collapsedGroups: readIds(record.collapsedGroups),
-      collapsedThreads: readIds(record.collapsedThreads),
-      filter: readFilter(record.filter),
+      collapsedGroups: readIds(record["collapsedGroups"]),
+      collapsedThreads: readIds(record["collapsedThreads"]),
+      filter: readFilter(record["filter"]),
     };
   } catch {
     // Corrupt JSON is a recoverable state: the user only loses collapse
