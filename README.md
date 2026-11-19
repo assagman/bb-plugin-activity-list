@@ -14,8 +14,9 @@ adds three things:
   collapsed. Chips at the top filter the list to one state. The `?` chip
   shows a legend.
 
-bb's thread menu, right-click menu, rename dialog, keyboard shortcuts, split
-drag, and pinned threads work as in bb's own list.
+bb's thread menu, right-click menu, rename dialog, keyboard shortcuts, and
+split drag work as in bb's own list. Pinned threads sort by activity too, not
+by the manual pin order bb's list keeps.
 
 ## Install
 

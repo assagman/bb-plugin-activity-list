@@ -49,6 +49,8 @@ works in a running bb (sort, glyphs, menu, filter, collapse).
 - Keep `src/model.ts` and `src/prefs-parse.ts` free of React and SDK runtime
   imports, so the smoke gate runs under plain Node.
 - Treat stored prefs as untrusted; parse them through `parsePrefs`.
+- Hover-only controls use `REVEAL_ON_INTENT`, not `hidden`: zero width keeps
+  them in the tab order, and coarse-pointer devices always show them.
 - Keep the row anchor's `data-sidebar-thread-shortcut-target` and
   `data-sidebar-thread-id` attributes; bb's shortcuts find rows by them.
 
@@ -57,3 +59,12 @@ works in a running bb (sort, glyphs, menu, filter, collapse).
 `scripts/setup-hooks` turns on `.githooks/`. Do not edit the generic hook
 files; put repository checks in `.githooks/<hook>.d/`. Never use
 `--no-verify`.
+
+## Known risks
+
+- The running glyph's tint reaches into bb's spinner with `[&_svg]:text-current`.
+  It holds while bb paints the spinner on its own `svg` with a text color. If
+  a bb update moves that color elsewhere, the spinner turns muted again; check
+  the running glyph after each bb update.
+- Rows are not windowed. A sidebar with many hundreds of expanded threads
+  mounts every row; collapse groups or filter if it gets slow.
