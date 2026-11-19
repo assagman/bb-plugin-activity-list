@@ -2,27 +2,30 @@
 // so scripts/smoke.ts can test it under plain Node. Stored values are
 // untrusted (another version, a manual edit), so every field is validated and
 // falls back to its default.
-import { ROLLUP_KINDS, type StatusKind } from "./model.ts";
+import { ROLLUP_KINDS, type StatusFilter, type StatusKind } from "./model.ts";
 
 /** Bounds stored id lists so a corrupt or hostile value cannot grow without limit. */
 export const MAX_IDS = 5_000;
 const MAX_ID_LENGTH = 256;
 
-/** The filter bar's choices: everything, or one status class. */
-export type StatusFilter = "all" | StatusKind;
+/** Re-exported for prefs.ts, which reads every prefs type from here; it lives with groupView. */
+export type { StatusFilter } from "./model.ts";
 
+/** What the list keeps per client: collapsed group keys and row ids, and the filter. */
 export interface ListPrefs {
   collapsedGroups: readonly string[];
   collapsedThreads: readonly string[];
   filter: StatusFilter;
 }
 
+/** Fresh-client state, and the fallback for missing or invalid stored prefs. */
 export const DEFAULT_PREFS: ListPrefs = {
   collapsedGroups: [],
   collapsedThreads: [],
   filter: "all",
 };
 
+/** Keeps only short string ids, capped in count, so bad storage cannot bloat the list. */
 function readIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value

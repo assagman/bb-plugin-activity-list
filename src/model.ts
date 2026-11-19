@@ -7,6 +7,18 @@ import type {
   PluginSidebarThreadIndicator,
 } from "@get-bb/plugin-sdk/app";
 
+/** Group labels. Pinned and the personal project's "Threads" match bb's list. */
+const PINNED_GROUP_NAME = "Pinned";
+const PERSONAL_GROUP_NAME = "Threads";
+const PENDING_GROUP_NAME = "Loading project…";
+const UNNAMED_PROJECT_NAME = "Untitled project";
+
+/** Time units for the compact "3m" / "2h" / "5d" age label on each row. */
+export const MINUTE_MS = 60_000;
+export const HOUR_MS = 60 * MINUTE_MS;
+export const DAY_MS = 24 * HOUR_MS;
+const WEEK_MS = 7 * DAY_MS;
+
 /**
  * The status classes the list colors. bb reports a dozen indicator kinds; the
  * user asked for a few clear states, so related kinds share one class.
@@ -111,6 +123,7 @@ export type ModelThread = Pick<
   | "latestAttentionAt"
 >;
 
+/** The project fields the list reads, so the smoke gate can build plain fixtures. */
 export type ModelProject = Pick<PluginSidebarProject, "id" | "name" | "isPersonal">;
 
 /**
@@ -132,16 +145,20 @@ export interface ThreadNode<T extends ModelThread = ModelThread> {
 
 /**
  * What a group stands for: Pinned, a known project, or a project whose record
- * has not loaded yet (its threads arrived first).
+ * has not loaded yet (its threads arrived first). Only a known project carries
+ * its record, and the type says so, so readers need no null guard for it.
  */
-export type GroupKind = "pinned" | "project" | "pending";
+export type GroupIdentity =
+  | { kind: "project"; project: ModelProject }
+  | { kind: "pinned"; project: null }
+  | { kind: "pending"; project: null };
 
 /** One sidebar group with its sorted thread tree. */
-export interface ProjectGroup<T extends ModelThread = ModelThread> {
-  kind: GroupKind;
+export type ProjectGroup<T extends ModelThread = ModelThread> = GroupIdentity & GroupContent<T>;
+
+/** The threads of a group, shared by every group kind. */
+interface GroupContent<T extends ModelThread> {
   key: string;
-  /** Set only when `kind` is "project". */
-  project: ModelProject | null;
   roots: ThreadNode<T>[];
   /** Latest activity of any thread in the group; 0 for an empty project. */
   activityAt: number;
@@ -159,6 +176,7 @@ function compareByActivity(aAt: number, a: ModelThread, bAt: number, b: ModelThr
   return bAt - aAt || a.displayTitle.localeCompare(b.displayTitle) || a.id.localeCompare(b.id);
 }
 
+/** Sibling order in a tree: by subtree activity, so a busy child lifts its parent. */
 function compareNodes(a: ThreadNode, b: ThreadNode): number {
   return compareByActivity(a.activityAt, a.thread, b.activityAt, b.thread);
 }
@@ -180,6 +198,48 @@ export function threadsWithStatus<T extends ModelThread>(
   return group.threads
     .filter((thread) => threadStatus(thread) === kind)
     .sort((a, b) => compareByActivity(threadActivityAt(a), a, threadActivityAt(b), b));
+}
+
+/** The filter bar's choices: everything, or one status class. */
+export type StatusFilter = "all" | StatusKind;
+
+/**
+ * How a group draws: its body (the thread tree, or a flat list of filter
+ * results or a collapsed group's open thread) and its header toggle. Decided
+ * in one place so the chevron never disagrees with the body under it.
+ */
+export type GroupView<T> = ({ mode: "tree" } | { mode: "flat"; threads: T[] }) & {
+  /** Whether the header shows the group as open. */
+  expanded: boolean;
+  /** Set while a filter is on: the toggle saves no choice the user cannot see. */
+  toggleLocked: boolean;
+};
+
+/**
+ * Picks a group's body, or null when the group is left out. A filter lists
+ * matches flat and ignores collapse; a collapsed group shows only the open
+ * thread. Both keep the open thread in view, so the user never loses the row
+ * of the page they are on. Empty Pinned and filtered groups with no match are
+ * left out, as bb's list leaves out empty Pinned.
+ */
+export function groupView<T extends ModelThread>(
+  group: ProjectGroup<T>,
+  filter: StatusFilter,
+  collapsed: boolean,
+  activeThreadId: string | null,
+): GroupView<T> | null {
+  if (group.kind === "pinned" && group.threads.length === 0) return null;
+  if (filter === "all" && !collapsed) return { mode: "tree", expanded: true, toggleLocked: false };
+  const active =
+    activeThreadId === null ? undefined : group.threads.find((t) => t.id === activeThreadId);
+  if (filter === "all") {
+    const threads = active ? [active] : [];
+    return { mode: "flat", threads, expanded: false, toggleLocked: false };
+  }
+  const matches = threadsWithStatus(group, filter);
+  if (active && !matches.includes(active)) matches.unshift(active);
+  if (matches.length === 0) return null;
+  return { mode: "flat", threads: matches, expanded: true, toggleLocked: true };
 }
 
 /**
@@ -278,13 +338,14 @@ export function buildGroups<T extends ModelThread>(
   }
 
   const groups: ProjectGroup<T>[] = projects.map((project) =>
-    makeGroup("project", project.id, project, byProject.get(project.id) ?? []),
+    makeGroup({ kind: "project", project }, project.id, byProject.get(project.id) ?? []),
   );
   // A thread whose project is not in the list yet (it is still loading) keeps
   // a group under its id instead of vanishing.
   const known = new Set(projects.map((project) => project.id));
   for (const [projectId, list] of byProject) {
-    if (!known.has(projectId)) groups.push(makeGroup("pending", projectId, null, list));
+    if (!known.has(projectId))
+      groups.push(makeGroup({ kind: "pending", project: null }, projectId, list));
   }
 
   groups.sort(
@@ -294,23 +355,22 @@ export function buildGroups<T extends ModelThread>(
       a.key.localeCompare(b.key),
   );
   return {
-    pinned: makeGroup("pinned", PINNED_GROUP_KEY, null, pinnedThreads),
+    pinned: makeGroup({ kind: "pinned", project: null }, PINNED_GROUP_KEY, pinnedThreads),
     projects: groups,
     counts: countStatuses(visible.map(threadStatus)),
   };
 }
 
+/** One group with its tree, latest activity, and roll-up counts precomputed. */
 function makeGroup<T extends ModelThread>(
-  kind: GroupKind,
+  identity: GroupIdentity,
   key: string,
-  project: ModelProject | null,
   threads: T[],
 ): ProjectGroup<T> {
   const roots = buildTrees(threads);
   return {
-    kind,
+    ...identity,
     key,
-    project,
     roots,
     threads,
     activityAt: roots[0]?.activityAt ?? 0,
@@ -318,20 +378,14 @@ function makeGroup<T extends ModelThread>(
   };
 }
 
-/** Group labels. Pinned and the personal project's "Threads" match bb's list. */
-const PINNED_GROUP_NAME = "Pinned";
-const PERSONAL_GROUP_NAME = "Threads";
-const PENDING_GROUP_NAME = "Loading project…";
-const UNNAMED_PROJECT_NAME = "Untitled project";
-
 /**
  * Display name of a group. The personal project has no name of its own (bb
  * sends null), so it takes bb's "Threads" label; a project still loading
  * shows a neutral name.
  */
-export function projectName(group: Pick<ProjectGroup, "kind" | "project">): string {
+export function projectName(group: GroupIdentity): string {
   if (group.kind === "pinned") return PINNED_GROUP_NAME;
-  if (group.kind === "pending" || group.project === null) return PENDING_GROUP_NAME;
+  if (group.kind === "pending") return PENDING_GROUP_NAME;
   if (group.project.isPersonal) return PERSONAL_GROUP_NAME;
   return group.project.name || UNNAMED_PROJECT_NAME;
 }
@@ -342,12 +396,6 @@ export function countStatuses(kinds: Iterable<StatusKind>): Map<StatusKind, numb
   for (const kind of kinds) counts.set(kind, (counts.get(kind) ?? 0) + 1);
   return counts;
 }
-
-/** Time units for the compact "3m" / "2h" / "5d" age label on each row. */
-export const MINUTE_MS = 60_000;
-export const HOUR_MS = 60 * MINUTE_MS;
-export const DAY_MS = 24 * HOUR_MS;
-const WEEK_MS = 7 * DAY_MS;
 
 /** Compact age of an activity time, as bb's rows show ages. */
 export function formatAge(activityAt: number, now: number): string {

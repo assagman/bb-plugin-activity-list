@@ -12,6 +12,7 @@ import { GroupSection, useRowContext } from "./GroupSection.tsx";
 import { buildGroups, STATUS_LABEL } from "./model.ts";
 import { useListPrefs } from "./prefs.ts";
 
+/** The slot's root: filter bar, Pinned, then project groups by activity. */
 export function ActivityList({ activeThreadId, onNavigate }: PluginThreadListProps) {
   const { status, threads, projects } = useSidebarThreads();
   const { prefs, toggleGroup, toggleThread, setFilter } = useListPrefs();

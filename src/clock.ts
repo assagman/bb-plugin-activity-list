@@ -9,6 +9,7 @@ const listeners = new Set<() => void>();
 let now = Date.now();
 let timer: ReturnType<typeof setInterval> | null = null;
 
+/** Starts the shared timer with the first listener and stops it with the last. */
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   if (timer === null) {
@@ -29,6 +30,7 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+/** Current time, refreshed every tick; for age labels, so rows need no timer. */
 export function useNow(): number {
   return useSyncExternalStore(
     subscribe,

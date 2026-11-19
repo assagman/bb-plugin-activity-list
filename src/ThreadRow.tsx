@@ -20,7 +20,7 @@ import { memo, useMemo } from "react";
 import { useNow } from "./clock.ts";
 import { formatAge, STATUS_LABEL, type StatusKind, statusFromIndicator } from "./model.ts";
 import { StatusGlyph } from "./StatusGlyph.tsx";
-import { cx, FOCUS_RING, META_TEXT } from "./ui.ts";
+import { cx, FOCUS_RING, KEYCAP_TEXT, META_TEXT, REVEAL_ON_INTENT, ROW_GAP } from "./ui.ts";
 
 /** Horizontal step per nesting level, as bb indents sub-threads. */
 const INDENT_PX = 12;
@@ -96,7 +96,9 @@ export const ThreadRow = memo(function ThreadRow({
   // row statuses, so this row reports exactly what bb's row would.
   const resolved = resolveThreadStatus({ thread, hiddenThreads, hasUnsubmittedDraft, rowStatus });
   const kind = statusFromIndicator(resolved.indicator);
-  const accent = STATUS_ACCENT[kind];
+  // Another plugin's status replaces bb's glyph, so this list's tint would
+  // disagree with what the row shows; the row stays plain then.
+  const accent = resolved.rowStatus ? undefined : STATUS_ACCENT[kind];
   const target = useMemo(() => toActionTarget(thread), [thread]);
   const childLabel = toggleLocked
     ? `${childCount} sub-threads, kept open: it contains the open thread`
@@ -106,7 +108,8 @@ export const ThreadRow = memo(function ThreadRow({
       <div
         data-active={isActive || undefined}
         className={cx(
-          "group/row relative flex h-7 items-center gap-1.5 rounded-md pr-1 text-sm",
+          "group/row relative flex h-7 items-center rounded-md pr-1 text-sm",
+          ROW_GAP,
           "hover:bg-sidebar-accent data-[active]:bg-sidebar-accent data-[active]:text-sidebar-accent-foreground",
           accent?.row,
         )}
@@ -181,7 +184,12 @@ export const ThreadRow = memo(function ThreadRow({
           </button>
         ) : null}
         {shortcut ? (
-          <kbd className="pointer-events-none shrink-0 rounded border border-sidebar-border px-1 text-[10px] text-muted-foreground">
+          <kbd
+            className={cx(
+              "pointer-events-none shrink-0 rounded border border-sidebar-border px-1 text-muted-foreground",
+              KEYCAP_TEXT,
+            )}
+          >
             {shortcut.label}
           </kbd>
         ) : (
@@ -196,7 +204,8 @@ export const ThreadRow = memo(function ThreadRow({
               aria-label={`Actions for ${thread.displayTitle}`}
               {...props}
               className={cx(
-                "relative hidden size-5 shrink-0 items-center justify-center rounded text-muted-foreground group-focus-within/row:flex group-hover/row:flex hover:bg-sidebar-accent hover:text-sidebar-foreground aria-expanded:flex",
+                "relative flex h-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                REVEAL_ON_INTENT.row,
                 FOCUS_RING,
               )}
             >

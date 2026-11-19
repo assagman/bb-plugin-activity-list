@@ -17,6 +17,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import type { StatusKind } from "./model.ts";
 import { STATUS_LABEL } from "./model.ts";
+import { cx } from "./ui.ts";
 
 /** Pixel box of every glyph, matching bb's 14 px compact row glyph. */
 const GLYPH_SIZE = 14;
@@ -25,8 +26,8 @@ const GLYPH_SIZE = 14;
 export const STATUS_TONE: Readonly<Record<StatusKind, string>> = {
   "needs-input": "text-attention",
   error: "text-destructive",
-  // warning-text is the theme's soft warning ink, the creamy yellow the user
-  // chose for running work; green (success) read as "completed".
+  // The theme's soft warning ink: running work wants notice without alarm,
+  // and success read as "completed".
   working: "text-warning-text",
   queued: "text-muted-foreground",
   background: "text-muted-foreground",
@@ -36,12 +37,19 @@ export const STATUS_TONE: Readonly<Record<StatusKind, string>> = {
   idle: "text-muted-foreground/40",
 };
 
-/** Overrides the muted color bb draws its running spinner with. */
-const RUNNING_GLYPH_TONE = "[&_svg]:text-warning-text";
+/**
+ * Makes bb's running spinner paint with its wrapper's tone. bb sets a muted
+ * class on the svg itself; this descendant selector outranks it, so the tone
+ * lives in STATUS_TONE alone and the glyph cannot drift from its count.
+ */
+const SVG_INHERITS_TONE = "[&_svg]:text-current";
 
-/** One full turn of the slow background ring, slower than bb's running spin. */
-const BACKGROUND_SPIN = "motion-safe:animate-[spin_3s_linear_infinite]";
+/** Motion per class; only the background ring turns, slower than bb's spin. */
+const GLYPH_MOTION: Partial<Record<StatusKind, string>> = {
+  background: "motion-safe:animate-[spin_3s_linear_infinite]",
+};
 
+/** Inputs of one glyph: its class plus what bb needs to draw its own glyphs. */
 interface StatusGlyphProps {
   kind: StatusKind;
   /** bb's resolved indicator for a row; drawn by bb when bb's glyph applies. */
@@ -56,6 +64,7 @@ interface StatusGlyphProps {
   className?: string;
 }
 
+/** The glyph for one status class, in rows, roll-ups, the legend, and chips. */
 export function StatusGlyph({
   kind,
   indicator,
@@ -63,19 +72,21 @@ export function StatusGlyph({
   decorative = false,
   className: extraClassName = "",
 }: StatusGlyphProps) {
-  const className = decorative ? `pointer-events-none ${extraClassName}` : extraClassName;
+  const className = cx(decorative && "pointer-events-none", extraClassName);
   // bb's glyph for two cases: a running thread, whose bb shape the user wants
   // kept, and a status another plugin set on the row, which must not vanish
   // when this list replaces bb's. Only the running glyph takes this list's
   // tone; another plugin's status keeps the color that plugin chose.
   if (kind === "working" || rowStatus) {
-    // bb paints its spinner's svg with its own muted class; a descendant
-    // selector outranks it, so the svg's currentColor follows the tone.
-    const tone = rowStatus ? "" : RUNNING_GLYPH_TONE;
     return (
       <span
         aria-hidden={decorative || undefined}
-        className={`inline-flex shrink-0 items-center justify-center ${tone} ${className}`}
+        className={cx(
+          "inline-flex shrink-0 items-center justify-center",
+          !rowStatus && STATUS_TONE[kind],
+          !rowStatus && SVG_INHERITS_TONE,
+          className,
+        )}
         title={rowStatus?.label ?? STATUS_LABEL[kind]}
       >
         <ThreadStatusGlyph
@@ -95,7 +106,11 @@ export function StatusGlyph({
     <span
       {...a11y}
       title={STATUS_LABEL[kind]}
-      className={`relative inline-flex shrink-0 items-center justify-center ${STATUS_TONE[kind]} ${className}`}
+      className={cx(
+        "relative inline-flex shrink-0 items-center justify-center",
+        STATUS_TONE[kind],
+        className,
+      )}
       style={{ width: GLYPH_SIZE, height: GLYPH_SIZE }}
     >
       {kind === "needs-input" ? (
@@ -108,7 +123,7 @@ export function StatusGlyph({
         width={GLYPH_SIZE}
         height={GLYPH_SIZE}
         aria-hidden="true"
-        className={glyphMotion(kind)}
+        className={GLYPH_MOTION[kind]}
       >
         {glyphShape(kind)}
       </svg>
@@ -116,11 +131,7 @@ export function StatusGlyph({
   );
 }
 
-function glyphMotion(kind: StatusKind): string {
-  if (kind === "background") return BACKGROUND_SPIN;
-  return "";
-}
-
+/** Shape per class, so states still read apart without color. */
 function glyphShape(kind: StatusKind) {
   switch (kind) {
     case "needs-input":

@@ -8,6 +8,7 @@ import {
   buildGroups,
   DAY_MS,
   formatAge,
+  groupView,
   HOUR_MS,
   MINUTE_MS,
   type ModelThread,
@@ -251,6 +252,43 @@ const checks: [string, () => void][] = [
       );
       assert.equal(group.counts.get("unread"), 3);
       assert.equal(group.counts.get("working"), 1);
+    },
+  ],
+  [
+    "a group's body: tree, filter matches with the open thread, or left out",
+    () => {
+      const { pinned, projects: groups } = buildGroups(
+        [
+          thread("busy", "p", 0, { indicator: "runtime" }),
+          thread("open", "p", 3),
+          thread("done", "p", 9, { indicator: "unread-success" }),
+        ],
+        [{ id: "p", name: "P", isPersonal: false }],
+      );
+      const group = groups[0];
+      assert.ok(group);
+      const ids = (view: ReturnType<typeof groupView>) =>
+        view && view.mode === "flat" ? view.threads.map((t) => t.id) : view;
+      assert.deepEqual(groupView(group, "all", false, "open"), {
+        mode: "tree",
+        expanded: true,
+        toggleLocked: false,
+      });
+      // The header agrees with the body: closed when collapsed, locked open
+      // under a filter.
+      assert.equal(groupView(group, "all", true, "open")?.expanded, false);
+      assert.equal(groupView(group, "working", true, "open")?.expanded, true);
+      assert.equal(groupView(group, "working", true, "open")?.toggleLocked, true);
+      // Collapsed: only the open thread stays; none open, an empty body.
+      assert.deepEqual(ids(groupView(group, "all", true, "open")), ["open"]);
+      assert.deepEqual(ids(groupView(group, "all", true, null)), []);
+      // Filtered: matches plus the open thread first, collapse ignored.
+      assert.deepEqual(ids(groupView(group, "working", true, "open")), ["open", "busy"]);
+      assert.deepEqual(ids(groupView(group, "working", false, "busy")), ["busy"]);
+      // No match and the open thread elsewhere: the group is left out.
+      assert.equal(groupView(group, "needs-input", false, "other"), null);
+      // Empty Pinned has no header, as in bb's list.
+      assert.equal(groupView(pinned, "all", false, null), null);
     },
   ],
 ];

@@ -16,6 +16,7 @@ const STORAGE_KEY = "bb-plugin-activity-list:prefs:v1";
 const listeners = new Set<() => void>();
 let cached: ListPrefs | null = null;
 
+/** localStorage, or null where the host denies it. */
 function storage(): Storage | null {
   try {
     return globalThis.localStorage ?? null;
@@ -25,11 +26,13 @@ function storage(): Storage | null {
   }
 }
 
+/** Parsed prefs, cached so useSyncExternalStore sees a stable value between writes. */
 function snapshot(): ListPrefs {
   if (cached === null) cached = parsePrefs(storage()?.getItem(STORAGE_KEY) ?? null);
   return cached;
 }
 
+/** Saves prefs and notifies every mounted list in this window. */
 function write(next: ListPrefs): void {
   cached = next;
   try {
@@ -40,6 +43,7 @@ function write(next: ListPrefs): void {
   for (const listener of listeners) listener();
 }
 
+/** Store subscription for useSyncExternalStore, including other windows' writes. */
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   // Another window of the same client changed the prefs: re-read them.
@@ -55,6 +59,7 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+/** Adds or removes one id, keeping the newest MAX_IDS so the stored list stays bounded. */
 function toggleId(ids: readonly string[], id: string): string[] {
   return ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id].slice(-MAX_IDS);
 }

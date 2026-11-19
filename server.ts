@@ -5,4 +5,5 @@
 // client, so the backend intentionally does nothing.
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
 
+/** Required backend entry; registers nothing. */
 export default function activityListPlugin(_bb: BbPluginApi): void {}

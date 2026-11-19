@@ -2,11 +2,17 @@
 // The chips let the user jump to every thread in one state without scanning
 // the whole list; the legend teaches the new colors in place.
 import { type ReactNode, useState } from "react";
-import { ROLLUP_KINDS, STATUS_LABEL, STATUS_PRIORITY, type StatusKind } from "./model.ts";
-import type { StatusFilter } from "./prefs-parse.ts";
+import {
+  ROLLUP_KINDS,
+  STATUS_LABEL,
+  STATUS_PRIORITY,
+  type StatusFilter,
+  type StatusKind,
+} from "./model.ts";
 import { StatusGlyph } from "./StatusGlyph.tsx";
 import { cx, FOCUS_RING } from "./ui.ts";
 
+/** Status chips that narrow the list to one state, plus the glyph legend. */
 export function FilterBar({
   counts,
   filter,
@@ -21,10 +27,11 @@ export function FilterBar({
   const [showLegend, setShowLegend] = useState(false);
   return (
     <>
-      <div
-        role="toolbar"
+      {/* A plain group of toggle buttons, each its own Tab stop; a toolbar
+          role would promise arrow-key focus this bar does not have. */}
+      <fieldset
         aria-label="Filter threads by status"
-        className="flex flex-wrap items-center gap-1 px-1 pt-1 pb-1"
+        className="m-0 flex min-w-0 flex-wrap items-center gap-1 border-0 px-1 pt-1 pb-1"
       >
         <FilterChip active={filter === "all"} onClick={() => onChange("all")} label="All threads">
           All
@@ -53,7 +60,7 @@ export function FilterBar({
         >
           ?
         </button>
-      </div>
+      </fieldset>
       {showLegend ? <StatusLegend /> : null}
     </>
   );
