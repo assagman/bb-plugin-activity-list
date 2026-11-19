@@ -27,6 +27,14 @@ type Thread = PluginSidebarThread;
 type Node = ThreadNode<Thread>;
 type Group = ProjectGroup<Thread>;
 
+/** Why a header toggle does nothing while a filter is on; it shows on hover. */
+const LOCKED_TOGGLE_TITLE = "Clear the status filter to collapse groups";
+
+/** Name and tooltip of a project's "+" button, one string so the two never differ. */
+function newThreadLabel(projectName: string): string {
+  return `New thread in ${projectName}`;
+}
+
 /** Callbacks and view state every row in the list shares. */
 export interface RowContext {
   activeThreadId: string | null;
@@ -46,7 +54,6 @@ export interface GroupSectionProps {
 
 /** One group: header with roll-up counts, then the body groupView picks. */
 export function GroupSection({ group, filter, collapsed, rows, onToggleGroup }: GroupSectionProps) {
-  const navigate = useBbNavigate();
   const { activeThreadId } = rows;
   // Walked over this group's threads only: a parent chain through an archived
   // or pinned thread is cut in the tree too, so that parent must not lock.
@@ -71,66 +78,95 @@ export function GroupSection({ group, filter, collapsed, rows, onToggleGroup }: 
         ))
       : view.threads.map((thread) => <FlatThreadRow key={thread.id} thread={thread} rows={rows} />);
 
+  return (
+    <section aria-label={projectName(group)} className="flex flex-col">
+      <GroupHeader
+        group={group}
+        expanded={expanded}
+        toggleLocked={toggleLocked}
+        onToggleGroup={onToggleGroup}
+        onNavigate={rows.onNavigate}
+      />
+      {body.length > 0 ? <div className="flex flex-col">{body}</div> : null}
+    </section>
+  );
+}
+
+/** Inputs of a group header: the group plus the toggle state groupView chose. */
+interface GroupHeaderProps {
+  group: Group;
+  expanded: boolean;
+  toggleLocked: boolean;
+  onToggleGroup: (key: string) => void;
+  onNavigate: () => void;
+}
+
+/** Group header: collapse toggle with the name, roll-up counts, and "+" for projects. */
+function GroupHeader({
+  group,
+  expanded,
+  toggleLocked,
+  onToggleGroup,
+  onNavigate,
+}: GroupHeaderProps) {
+  const navigate = useBbNavigate();
   const name = projectName(group);
   const isEmpty = group.threads.length === 0;
   return (
-    <section aria-label={name} className="flex flex-col">
-      <div
+    <div
+      className={cx(
+        "group/header relative flex h-7 items-center rounded-md pr-1 pl-1 hover:bg-sidebar-accent/60",
+        HEADER_GAP,
+      )}
+    >
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-disabled={toggleLocked || undefined}
+        title={toggleLocked ? LOCKED_TOGGLE_TITLE : undefined}
+        onClick={() => {
+          if (!toggleLocked) onToggleGroup(group.key);
+        }}
         className={cx(
-          "group/header relative flex h-7 items-center rounded-md pr-1 pl-1 hover:bg-sidebar-accent/60",
-          HEADER_GAP,
+          "flex min-w-0 flex-1 items-center gap-1 self-stretch rounded-md text-left aria-disabled:cursor-default",
+          FOCUS_RING,
         )}
       >
+        <Icon
+          name={expanded ? "ChevronDown" : "ChevronRight"}
+          fallback="ChevronRight"
+          aria-hidden
+          className="size-3.5 shrink-0 text-muted-foreground"
+        />
+        <span
+          className={cx(
+            "truncate text-xs font-medium",
+            isEmpty ? "text-muted-foreground/70" : "text-muted-foreground",
+          )}
+        >
+          {name}
+        </span>
+      </button>
+      <RollupChips counts={group.counts} />
+      {group.kind === "project" ? (
         <button
           type="button"
-          aria-expanded={expanded}
-          aria-disabled={toggleLocked || undefined}
-          title={toggleLocked ? "Clear the status filter to collapse groups" : undefined}
+          aria-label={newThreadLabel(name)}
+          title={newThreadLabel(name)}
           onClick={() => {
-            if (!toggleLocked) onToggleGroup(group.key);
+            navigate.toCompose({ projectId: group.key, focusPrompt: true });
+            onNavigate();
           }}
           className={cx(
-            "flex min-w-0 flex-1 items-center gap-1 self-stretch rounded-md text-left aria-disabled:cursor-default",
+            "flex h-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            REVEAL_ON_INTENT.header,
             FOCUS_RING,
           )}
         >
-          <Icon
-            name={expanded ? "ChevronDown" : "ChevronRight"}
-            fallback="ChevronRight"
-            aria-hidden
-            className="size-3.5 shrink-0 text-muted-foreground"
-          />
-          <span
-            className={cx(
-              "truncate text-xs font-medium",
-              isEmpty ? "text-muted-foreground/70" : "text-muted-foreground",
-            )}
-          >
-            {name}
-          </span>
+          <Icon name="Plus" aria-hidden className="size-3.5" />
         </button>
-        <RollupChips counts={group.counts} />
-        {group.kind === "project" ? (
-          <button
-            type="button"
-            aria-label={`New thread in ${name}`}
-            title={`New thread in ${name}`}
-            onClick={() => {
-              navigate.toCompose({ projectId: group.key, focusPrompt: true });
-              rows.onNavigate();
-            }}
-            className={cx(
-              "flex h-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
-              REVEAL_ON_INTENT.header,
-              FOCUS_RING,
-            )}
-          >
-            <Icon name="Plus" aria-hidden className="size-3.5" />
-          </button>
-        ) : null}
-      </div>
-      {body.length > 0 ? <div className="flex flex-col">{body}</div> : null}
-    </section>
+      ) : null}
+    </div>
   );
 }
 

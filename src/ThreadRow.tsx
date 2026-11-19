@@ -36,6 +36,12 @@ const STATUS_ACCENT: Partial<Record<StatusKind, { row: string; bar: string }>> =
   error: { row: "bg-destructive/10", bar: "bg-destructive" },
 };
 
+/** Key cap for the row's jump shortcut, styled as bb's own sidebar shows it. */
+const KEYCAP_CLASS = cx(
+  "pointer-events-none shrink-0 rounded border border-sidebar-border px-1 text-muted-foreground",
+  KEYCAP_TEXT,
+);
+
 /** Shared empty list, so rows without hidden children keep a stable prop. */
 export const NO_THREADS: readonly PluginSidebarThread[] = [];
 
@@ -184,14 +190,7 @@ export const ThreadRow = memo(function ThreadRow({
           </button>
         ) : null}
         {shortcut ? (
-          <kbd
-            className={cx(
-              "pointer-events-none shrink-0 rounded border border-sidebar-border px-1 text-muted-foreground",
-              KEYCAP_TEXT,
-            )}
-          >
-            {shortcut.label}
-          </kbd>
+          <kbd className={KEYCAP_CLASS}>{shortcut.label}</kbd>
         ) : (
           <Age activityAt={activityAt} />
         )}
