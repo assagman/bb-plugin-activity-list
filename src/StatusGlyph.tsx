@@ -3,8 +3,9 @@
 // apart at a glance, so each class gets its own color and shape. Shape differs
 // too, so the states still read without color (WCAG 1.4.1).
 //
-// The working state is the exception: the user likes bb's own running glyph,
-// so that state renders bb's glyph unchanged.
+// The working state keeps bb's own running glyph, which the user likes, but
+// tints it with the working tone: every state's row glyph and its count in the
+// group header share one color, so the two read as the same thing.
 //
 // Every color is a bb theme token, never a fixed hue, so the glyphs follow
 // whatever palette the user runs (a fixed green clashed with violet themes).
@@ -24,10 +25,9 @@ const GLYPH_SIZE = 14;
 export const STATUS_TONE: Readonly<Record<StatusKind, string>> = {
   "needs-input": "text-attention",
   error: "text-destructive",
-  // success is the one token that is green in every built-in bb theme, so a
-  // running count never shares a hue with attention (needs input) or primary
-  // (unread); a custom theme still decides its own success hue. warning-text sat next to attention's amber in the default theme.
-  working: "text-success",
+  // warning-text is the theme's soft warning ink, the creamy yellow the user
+  // chose for running work; green (success) read as "completed".
+  working: "text-warning-text",
   queued: "text-muted-foreground",
   background: "text-muted-foreground",
   // primary is the theme's own accent, as bb's unread dot uses it.
@@ -35,6 +35,9 @@ export const STATUS_TONE: Readonly<Record<StatusKind, string>> = {
   draft: "text-muted-foreground",
   idle: "text-muted-foreground/40",
 };
+
+/** Overrides the muted color bb draws its running spinner with. */
+const RUNNING_GLYPH_TONE = "[&_svg]:text-warning-text";
 
 /** One full turn of the slow background ring, slower than bb's running spin. */
 const BACKGROUND_SPIN = "motion-safe:animate-[spin_3s_linear_infinite]";
@@ -61,14 +64,18 @@ export function StatusGlyph({
   className: extraClassName = "",
 }: StatusGlyphProps) {
   const className = decorative ? `pointer-events-none ${extraClassName}` : extraClassName;
-  // bb's glyph for two cases: a running thread, whose bb glyph the user wants
-  // kept as is, and a status another plugin set on the row, which must not
-  // vanish when this list replaces bb's.
+  // bb's glyph for two cases: a running thread, whose bb shape the user wants
+  // kept, and a status another plugin set on the row, which must not vanish
+  // when this list replaces bb's. Only the running glyph takes this list's
+  // tone; another plugin's status keeps the color that plugin chose.
   if (kind === "working" || rowStatus) {
+    // bb paints its spinner's svg with its own muted class; a descendant
+    // selector outranks it, so the svg's currentColor follows the tone.
+    const tone = rowStatus ? "" : RUNNING_GLYPH_TONE;
     return (
       <span
         aria-hidden={decorative || undefined}
-        className={`inline-flex shrink-0 items-center justify-center ${className}`}
+        className={`inline-flex shrink-0 items-center justify-center ${tone} ${className}`}
         title={rowStatus?.label ?? STATUS_LABEL[kind]}
       >
         <ThreadStatusGlyph
