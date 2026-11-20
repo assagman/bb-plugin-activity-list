@@ -21,11 +21,11 @@ for tool in npm shellcheck shfmt; do
 done
 
 # Only run when a shell script this repository owns is staged; keep this
-# pattern in step with the lint:sh file set in package.json. The names are read
+# pattern in step with the file set in scripts/lint-sh. The names are read
 # in full first: under pipefail, grep -q quitting early could SIGPIPE git and
 # turn a match into a silent skip. A git error fails the commit.
 staged=$(staged_git diff --cached --name-only --diff-filter=ACMR) || exit 1
-grep -q -E '^(\.githooks/[a-z-]+\.d/|scripts/setup-hooks$)' <<<"$staged" || exit 0
+grep -q -E '^(\.githooks/[a-z-]+\.d/|scripts/(setup-hooks|lint-sh)$)' <<<"$staged" || exit 0
 
 # A staged symlink could point the linters outside the copy, so refuse it.
 if staged_git ls-files --stage | grep -q '^120000 '; then
@@ -44,6 +44,7 @@ trap cleanup EXIT
 
 staged_git checkout-index --all --prefix="$scratch/"
 cd "$scratch"
-# package.json's lint:sh is the one definition of the files and flags, shared
-# with npm run lint at push time; it needs no node_modules.
+# scripts/lint-sh, reached through npm run lint:sh, is the one definition of the
+# files and flags, shared with npm run lint at push time; it needs no
+# node_modules.
 run_step 'shell lint' "$CHECK_TIMEOUT_SECONDS" npm run --silent lint:sh

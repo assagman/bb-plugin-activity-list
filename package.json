@@ -23,7 +23,7 @@
   },
   "scripts": {
     "lint": "biome check . --error-on-warnings && npm run --silent lint:sh",
-    "lint:sh": "shellcheck -x scripts/setup-hooks .githooks/*.d/* && shfmt -d -i 2 .githooks/*.d/*",
+    "lint:sh": "scripts/lint-sh",
     "format": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "build": "bb plugin build .",

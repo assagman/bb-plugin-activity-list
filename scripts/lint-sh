@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Shell lint for the scripts this repository tracks, shared by `npm run lint`
+# (push) and the staged pre-commit check. A developer may keep untracked local
+# checks in .githooks/<hook>.d/ (git runs every file there) that follow their
+# own format, so in a git checkout only tracked hook checks are judged. The
+# pre-commit copy of the index has no .git and holds tracked files only.
+# setup-hooks is a shared template file, so it is linted but keeps its format.
+set -euo pipefail
+
+hooks=()
+if [ -e .git ]; then
+  # A plain assignment on its own line, so set -e stops the lint when git
+  # fails instead of judging nothing. A read loop, not mapfile: macOS
+  # /bin/bash is 3.2.
+  list=$(git ls-files -- '.githooks/*.d/*')
+  while IFS= read -r file; do
+    if [ -n "$file" ]; then hooks+=("$file"); fi
+  done <<<"$list"
+else
+  hooks=(.githooks/*.d/*)
+fi
+[ "${#hooks[@]}" -gt 0 ] || {
+  echo "lint-sh: no hook checks found" >&2
+  exit 1
+}
+
+shellcheck -x scripts/setup-hooks scripts/lint-sh "${hooks[@]}"
+shfmt -d -i 2 scripts/lint-sh "${hooks[@]}"
