@@ -15,6 +15,7 @@ import {
   projectName,
   ROLLUP_KINDS,
   rowState,
+  STATUS_PRIORITY,
   settledStatus,
   statusFromIndicator,
   threadStatus,
@@ -243,7 +244,7 @@ const checks: [string, () => void][] = [
       const idle = { activity: IDLE_ACTIVITY };
       assert.equal(settledStatus("unread", live), "background");
       assert.equal(settledStatus("unread", idle), "unread");
-      for (const kind of ["working", "queued", "idle", "needs-input"] as const) {
+      for (const kind of STATUS_PRIORITY.filter((other) => other !== "unread")) {
         assert.equal(settledStatus(kind, live), kind);
       }
     },
@@ -259,8 +260,8 @@ const checks: [string, () => void][] = [
         label: "Background",
       });
       // Not held back: bb's own label stays.
-      // Also when a collapsed sub-thread has live work: bb folds that work
-      // into the row's flags, but the row's own turn is complete.
+      // The row's own thread is the only input, so a collapsed sub-thread's
+      // work cannot reach this state.
       assert.deepEqual(rowState({ ...unread, rowStatus: null }, { activity: IDLE_ACTIVITY }), {
         kind: "unread",
         label: "Unread thread succeeded",

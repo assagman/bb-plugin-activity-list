@@ -106,9 +106,9 @@ export const ROLLUP_KINDS: readonly StatusKind[] = STATUS_PRIORITY.filter(
  * look", so it waits for the work. Workflows and plan mode need no rule: bb
  * ranks them above the dot itself.
  *
- * @param thread The thread whose turn the dot reports. Only a root thread is
- *   ever unread in bb, so a collapsed sub-thread's work says nothing about
- *   this turn and must not hold the dot back.
+ * @param thread The thread whose turn the dot reports. bb's resolver raises
+ *   the dot only for a thread without a parent, so a collapsed sub-thread's
+ *   work says nothing about this turn and must not hold the dot back.
  */
 export function settledStatus(
   kind: StatusKind,
@@ -121,10 +121,10 @@ export function settledStatus(
 
 /**
  * A thread's own state: bb's indicator, with unread held back while its
- * background work is live. Chips
- * and roll-ups count each thread once by its own state; a row's glyph also
- * folds in collapsed children and drafts (bb's resolver), so a collapsed
- * parent may glow for a child that the counts list under the child itself.
+ * background work is live. Chips and roll-ups count each thread once by its
+ * own state; a row's glyph also folds in collapsed children and drafts (bb's
+ * resolver), so a collapsed parent may glow for a child that the counts list
+ * under the child itself.
  */
 export function threadStatus(
   thread: Pick<PluginSidebarThread, "indicator" | "activity">,
