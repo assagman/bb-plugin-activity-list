@@ -25,8 +25,11 @@ client. `bb plugin disable activity-list` brings bb's list back everywhere.
   working (bb's own running glyph and its counts, both in warning-text),
   unread (primary dot), and queued, background work, draft, idle (muted,
   told apart by shape).
-- An unread thread with a live background agent or command shows background
-  work, not unread. The unread dot shows when that work ends.
+- A thread shows as unread only when its turn is fully complete. An unread
+  thread with a live background agent or command shows background work; the
+  unread dot shows when that work ends. No timer decides this. To keep a
+  service running without holding the dot, start it in a bb terminal, not as
+  a background command.
 - Group headers show colored counts of the states inside, also when collapsed.
 - Chips at the top filter the list to one state.
 

@@ -9,9 +9,11 @@ adds three things:
 - **Colored status cues.** Each row shows its state: needs input, failed,
   working (bb's own running glyph), queued, background work, unread, draft,
   or idle. All colors come from the active bb theme. Rows that block on you
-  get a tinted background and a side bar. The unread dot waits until
-  background agents and commands end; until then the row shows background
-  work.
+  get a tinted background and a side bar. A thread shows as unread only
+  when its turn is fully complete: while a background agent or command of
+  the agent is live, the row shows background work, because the agent
+  starts again when that work returns. No timer decides this. A service in
+  a bb terminal is not the agent's work and does not hold the unread dot.
 - **Roll-ups and filters.** Group headers count the states inside, also when
   collapsed. Chips at the top filter the list to one state. The `?` chip
   shows a legend.

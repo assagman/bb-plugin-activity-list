@@ -17,6 +17,7 @@ import {
   rowState,
   settledStatus,
   statusFromIndicator,
+  threadStatus,
   threadsWithStatus,
 } from "../src/model.ts";
 import { parsePrefs } from "../src/prefs-parse.ts";
@@ -213,6 +214,26 @@ const checks: [string, () => void][] = [
       assert.equal(group.counts.get("background"), 2);
       assert.equal(counts.get("unread"), 1);
       assert.equal(counts.get("error"), 1);
+    },
+  ],
+  [
+    "a thread reads as unread only when its turn has fully completed",
+    () => {
+      const status = (indicator: string, activity = IDLE_ACTIVITY) =>
+        threadStatus({ indicator, activity } as Parameters<typeof threadStatus>[0]);
+      const oneCommand = { ...IDLE_ACTIVITY, backgroundCommands: 1 };
+      // An intermediate message: the turn is still open.
+      assert.equal(status("runtime"), "working");
+      // A silent continuation: the turn ended, but the command it waits for
+      // is live, and the agent starts again when it returns.
+      assert.equal(status("unread-success", oneCommand), "background");
+      // A long-running command holds the state for as long as it is live; no
+      // clock decides, so the same input reads the same at any age.
+      assert.equal(status("unread-success", oneCommand), "background");
+      // Genuine completion: the turn ended and nothing is live.
+      assert.equal(status("unread-success"), "unread");
+      // A read thread with live work was never unread; it stays background.
+      assert.equal(status("background-command", oneCommand), "background");
     },
   ],
   [
