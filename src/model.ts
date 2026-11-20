@@ -99,13 +99,63 @@ export const ROLLUP_KINDS: readonly StatusKind[] = STATUS_PRIORITY.filter(
 );
 
 /**
- * A thread's own state, from bb's indicator. Chips and roll-ups count each
- * thread once by its own state; a row's glyph also folds in collapsed
- * children and drafts (bb's resolver), so a collapsed parent may glow for a
- * child that the counts list under the child itself.
+ * Holds the unread state back while background work is live. A provider ends a
+ * turn and starts the next by itself when a background agent or command
+ * returns; in that gap bb reports the thread idle and unread, and ranks its
+ * unread dot above that work. The user reads the dot as "finished, come and
+ * look", so it waits for the work. Workflows and plan mode need no rule: bb
+ * ranks them above the dot itself.
+ *
+ * @param threads The thread plus any hidden threads its row stands for; bb
+ *   counts hidden threads' work toward the row the same way.
  */
-export function threadStatus(thread: Pick<PluginSidebarThread, "indicator">): StatusKind {
-  return statusFromIndicator(thread.indicator);
+export function settledStatus(
+  kind: StatusKind,
+  threads: readonly Pick<PluginSidebarThread, "activity">[],
+): StatusKind {
+  if (kind !== "unread") return kind;
+  const hasLiveWork = threads.some(
+    ({ activity }) => activity.backgroundAgents > 0 || activity.backgroundCommands > 0,
+  );
+  return hasLiveWork ? "background" : kind;
+}
+
+/**
+ * A thread's own state, from bb's indicator once live work has settled. Chips
+ * and roll-ups count each thread once by its own state; a row's glyph also
+ * folds in collapsed children and drafts (bb's resolver), so a collapsed
+ * parent may glow for a child that the counts list under the child itself.
+ */
+export function threadStatus(
+  thread: Pick<PluginSidebarThread, "indicator" | "activity">,
+): StatusKind {
+  return settledStatus(statusFromIndicator(thread.indicator), [thread]);
+}
+
+/** What bb's resolver reports for a row; the fields {@link rowState} reads. */
+interface ResolvedRow {
+  indicator: PluginSidebarThreadIndicator | string;
+  /** bb's label for what bb's row shows: the row status's, else the indicator's. */
+  label: string | null;
+  /** Another plugin's status, when it shows in place of the indicator. */
+  rowStatus: { label: string } | null;
+}
+
+/**
+ * The state and accessible label a row shows. Kept here, not in the row
+ * component, so the smoke gate proves that a row and the counts hold the
+ * unread state back by one rule. bb's label names bb's indicator, so a row
+ * that shows another state takes this list's label, unless another plugin's
+ * status is what the row draws.
+ */
+export function rowState(
+  resolved: ResolvedRow,
+  threads: readonly Pick<PluginSidebarThread, "activity">[],
+): { kind: StatusKind; label: string } {
+  const reported = statusFromIndicator(resolved.indicator);
+  const kind = settledStatus(reported, threads);
+  const bbLabel = kind === reported ? resolved.label : (resolved.rowStatus?.label ?? null);
+  return { kind, label: bbLabel ?? STATUS_LABEL[kind] };
 }
 
 /** The thread fields the model reads; a subset keeps fixtures small. */
@@ -116,6 +166,7 @@ export type ModelThread = Pick<
   | "parentThreadId"
   | "displayTitle"
   | "indicator"
+  | "activity"
   | "isPinned"
   | "isHidden"
   | "isArchived"

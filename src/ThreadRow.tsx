@@ -18,7 +18,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import { memo, useMemo } from "react";
 import { useNow } from "./clock.ts";
-import { formatAge, STATUS_LABEL, type StatusKind, statusFromIndicator } from "./model.ts";
+import { formatAge, rowState, type StatusKind } from "./model.ts";
 import { StatusGlyph } from "./StatusGlyph.tsx";
 import { cx, FOCUS_RING, KEYCAP_TEXT, META_TEXT, REVEAL_ON_INTENT, ROW_GAP } from "./ui.ts";
 
@@ -101,7 +101,8 @@ export const ThreadRow = memo(function ThreadRow({
   // bb's own resolver folds in drafts, collapsed children, and other plugins'
   // row statuses, so this row reports exactly what bb's row would.
   const resolved = resolveThreadStatus({ thread, hiddenThreads, hasUnsubmittedDraft, rowStatus });
-  const kind = statusFromIndicator(resolved.indicator);
+  // An unread row waits for live background work, as the counts and chips do.
+  const { kind, label } = rowState(resolved, [thread, ...hiddenThreads]);
   // Another plugin's status replaces bb's glyph, so this list's tint would
   // disagree with what the row shows; the row stays plain then.
   const accent = resolved.rowStatus ? undefined : STATUS_ACCENT[kind];
@@ -135,7 +136,7 @@ export const ThreadRow = memo(function ThreadRow({
           draggable={false}
           data-sidebar-thread-shortcut-target=""
           data-sidebar-thread-id={thread.id}
-          aria-label={`${thread.displayTitle}, ${resolved.label ?? STATUS_LABEL[kind]}`}
+          aria-label={`${thread.displayTitle}, ${label}`}
           aria-current={isActive ? "page" : undefined}
           aria-keyshortcuts={shortcut?.ariaKeyshortcuts}
           {...splitProps}

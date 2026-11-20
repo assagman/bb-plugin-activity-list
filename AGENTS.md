@@ -79,3 +79,6 @@ The hooks fail closed, so install their tools first: `gitleaks`,
   the running glyph after each bb update.
 - Rows are not windowed. A sidebar with many hundreds of expanded threads
   mounts every row; collapse groups or filter if it gets slow.
+- `settledStatus` exists because bb ranks its unread dot above background
+  agents and commands. If a bb update ranks that work first, the rule has no
+  effect; delete it then.

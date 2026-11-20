@@ -14,6 +14,8 @@ import {
   type ModelThread,
   projectName,
   ROLLUP_KINDS,
+  rowState,
+  settledStatus,
   statusFromIndicator,
   threadsWithStatus,
 } from "../src/model.ts";
@@ -21,6 +23,14 @@ import { parsePrefs } from "../src/prefs-parse.ts";
 
 /** Fixed clock so ages and orders never depend on when the gate runs. */
 const NOW = Date.UTC(2026, 10, 20, 12, 0, 0);
+
+/** No live work: what bb reports for a thread with nothing running. */
+const IDLE_ACTIVITY: ModelThread["activity"] = {
+  workflows: 0,
+  backgroundAgents: 0,
+  backgroundCommands: 0,
+  planMode: 0,
+};
 
 function thread(
   id: string,
@@ -35,6 +45,7 @@ function thread(
     parentThreadId: null,
     displayTitle: id,
     indicator: "none",
+    activity: IDLE_ACTIVITY,
     isPinned: false,
     isHidden: false,
     isArchived: false,
@@ -163,6 +174,86 @@ const checks: [string, () => void][] = [
       assert.equal(statusFromIndicator("queued-waiting"), "queued");
       assert.equal(statusFromIndicator("unread-success"), "unread");
       assert.equal(statusFromIndicator("some-future-kind"), "idle");
+    },
+  ],
+  [
+    "counts and the filter hold the unread state while background work is live",
+    () => {
+      // A provider ends a turn and starts the next by itself when a background
+      // task returns. In that gap bb reports the unread dot over the live task.
+      const { projects: groups, counts } = buildGroups(
+        [
+          thread("agent", "p", 1, {
+            indicator: "unread-success",
+            activity: { ...IDLE_ACTIVITY, backgroundAgents: 1 },
+          }),
+          thread("command", "p", 2, {
+            indicator: "unread-success",
+            activity: { ...IDLE_ACTIVITY, backgroundCommands: 2 },
+          }),
+          thread("done", "p", 3, { indicator: "unread-success" }),
+          // Live work never hides a state that outranks it in bb's order.
+          thread("failed", "p", 4, {
+            indicator: "unread-error",
+            activity: { ...IDLE_ACTIVITY, backgroundAgents: 1 },
+          }),
+        ],
+        [{ id: "p", name: "P", isPersonal: false }],
+      );
+      const group = groups[0];
+      assert.ok(group);
+      assert.deepEqual(
+        threadsWithStatus(group, "background").map((t) => t.id),
+        ["agent", "command"],
+      );
+      assert.deepEqual(
+        threadsWithStatus(group, "unread").map((t) => t.id),
+        ["done"],
+      );
+      assert.equal(group.counts.get("background"), 2);
+      assert.equal(counts.get("unread"), 1);
+      assert.equal(counts.get("error"), 1);
+    },
+  ],
+  [
+    "only the unread state yields to live work, across the threads a row stands for",
+    () => {
+      const live = { activity: { ...IDLE_ACTIVITY, backgroundCommands: 1 } };
+      const idle = { activity: IDLE_ACTIVITY };
+      assert.equal(settledStatus("unread", [idle, live]), "background");
+      assert.equal(settledStatus("unread", [idle]), "unread");
+      for (const kind of ["working", "queued", "idle", "needs-input"] as const) {
+        assert.equal(settledStatus(kind, [live]), kind);
+      }
+    },
+  ],
+  [
+    "a row's label follows the state it shows",
+    () => {
+      const live = [{ activity: { ...IDLE_ACTIVITY, backgroundAgents: 1 } }];
+      const unread = { indicator: "unread-success", label: "Unread thread succeeded" };
+      // Held back: bb's label names the dot the row no longer shows.
+      assert.deepEqual(rowState({ ...unread, rowStatus: null }, live), {
+        kind: "background",
+        label: "Background",
+      });
+      // Not held back: bb's own label stays.
+      assert.deepEqual(rowState({ ...unread, rowStatus: null }, [{ activity: IDLE_ACTIVITY }]), {
+        kind: "unread",
+        label: "Unread thread succeeded",
+      });
+      // Another plugin's status is what the row draws, so its label wins.
+      assert.deepEqual(
+        rowState(
+          { indicator: "unread-success", label: "Syncing", rowStatus: { label: "Syncing" } },
+          live,
+        ),
+        { kind: "background", label: "Syncing" },
+      );
+      assert.deepEqual(rowState({ indicator: "none", label: null, rowStatus: null }, live), {
+        kind: "idle",
+        label: "Idle",
+      });
     },
   ],
   [
