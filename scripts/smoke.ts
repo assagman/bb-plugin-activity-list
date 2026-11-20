@@ -219,16 +219,16 @@ const checks: [string, () => void][] = [
   [
     "a thread reads as unread only when its turn has fully completed",
     () => {
-      const status = (indicator: string, activity = IDLE_ACTIVITY) =>
-        threadStatus({ indicator, activity } as Parameters<typeof threadStatus>[0]);
+      const status = (
+        indicator: Parameters<typeof threadStatus>[0]["indicator"],
+        activity = IDLE_ACTIVITY,
+      ) => threadStatus({ indicator, activity });
       const oneCommand = { ...IDLE_ACTIVITY, backgroundCommands: 1 };
       // An intermediate message: the turn is still open.
       assert.equal(status("runtime"), "working");
       // A silent continuation: the turn ended, but the command it waits for
-      // is live, and the agent starts again when it returns.
-      assert.equal(status("unread-success", oneCommand), "background");
-      // A long-running command holds the state for as long as it is live; no
-      // clock decides, so the same input reads the same at any age.
+      // is live, and the agent starts again when it returns. No clock is an
+      // input, so this holds for as long as the command is live.
       assert.equal(status("unread-success", oneCommand), "background");
       // Genuine completion: the turn ended and nothing is live.
       assert.equal(status("unread-success"), "unread");
@@ -237,21 +237,21 @@ const checks: [string, () => void][] = [
     },
   ],
   [
-    "only the unread state yields to live work, across the threads a row stands for",
+    "only the unread state yields to live work",
     () => {
       const live = { activity: { ...IDLE_ACTIVITY, backgroundCommands: 1 } };
       const idle = { activity: IDLE_ACTIVITY };
-      assert.equal(settledStatus("unread", [idle, live]), "background");
-      assert.equal(settledStatus("unread", [idle]), "unread");
+      assert.equal(settledStatus("unread", live), "background");
+      assert.equal(settledStatus("unread", idle), "unread");
       for (const kind of ["working", "queued", "idle", "needs-input"] as const) {
-        assert.equal(settledStatus(kind, [live]), kind);
+        assert.equal(settledStatus(kind, live), kind);
       }
     },
   ],
   [
     "a row's label follows the state it shows",
     () => {
-      const live = [{ activity: { ...IDLE_ACTIVITY, backgroundAgents: 1 } }];
+      const live = { activity: { ...IDLE_ACTIVITY, backgroundAgents: 1 } };
       const unread = { indicator: "unread-success", label: "Unread thread succeeded" };
       // Held back: bb's label names the dot the row no longer shows.
       assert.deepEqual(rowState({ ...unread, rowStatus: null }, live), {
@@ -259,7 +259,9 @@ const checks: [string, () => void][] = [
         label: "Background",
       });
       // Not held back: bb's own label stays.
-      assert.deepEqual(rowState({ ...unread, rowStatus: null }, [{ activity: IDLE_ACTIVITY }]), {
+      // Also when a collapsed sub-thread has live work: bb folds that work
+      // into the row's flags, but the row's own turn is complete.
+      assert.deepEqual(rowState({ ...unread, rowStatus: null }, { activity: IDLE_ACTIVITY }), {
         kind: "unread",
         label: "Unread thread succeeded",
       });

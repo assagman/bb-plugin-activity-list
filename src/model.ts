@@ -106,22 +106,22 @@ export const ROLLUP_KINDS: readonly StatusKind[] = STATUS_PRIORITY.filter(
  * look", so it waits for the work. Workflows and plan mode need no rule: bb
  * ranks them above the dot itself.
  *
- * @param threads The thread plus any hidden threads its row stands for; bb
- *   counts hidden threads' work toward the row the same way.
+ * @param thread The thread whose turn the dot reports. Only a root thread is
+ *   ever unread in bb, so a collapsed sub-thread's work says nothing about
+ *   this turn and must not hold the dot back.
  */
 export function settledStatus(
   kind: StatusKind,
-  threads: readonly Pick<PluginSidebarThread, "activity">[],
+  { activity }: Pick<PluginSidebarThread, "activity">,
 ): StatusKind {
   if (kind !== "unread") return kind;
-  const hasLiveWork = threads.some(
-    ({ activity }) => activity.backgroundAgents > 0 || activity.backgroundCommands > 0,
-  );
+  const hasLiveWork = activity.backgroundAgents > 0 || activity.backgroundCommands > 0;
   return hasLiveWork ? "background" : kind;
 }
 
 /**
- * A thread's own state, from bb's indicator once live work has settled. Chips
+ * A thread's own state: bb's indicator, with unread held back while its
+ * background work is live. Chips
  * and roll-ups count each thread once by its own state; a row's glyph also
  * folds in collapsed children and drafts (bb's resolver), so a collapsed
  * parent may glow for a child that the counts list under the child itself.
@@ -129,7 +129,7 @@ export function settledStatus(
 export function threadStatus(
   thread: Pick<PluginSidebarThread, "indicator" | "activity">,
 ): StatusKind {
-  return settledStatus(statusFromIndicator(thread.indicator), [thread]);
+  return settledStatus(statusFromIndicator(thread.indicator), thread);
 }
 
 /** What bb's resolver reports for a row; the fields {@link rowState} reads. */
@@ -150,10 +150,10 @@ interface ResolvedRow {
  */
 export function rowState(
   resolved: ResolvedRow,
-  threads: readonly Pick<PluginSidebarThread, "activity">[],
+  thread: Pick<PluginSidebarThread, "activity">,
 ): { kind: StatusKind; label: string } {
   const reported = statusFromIndicator(resolved.indicator);
-  const kind = settledStatus(reported, threads);
+  const kind = settledStatus(reported, thread);
   const bbLabel = kind === reported ? resolved.label : (resolved.rowStatus?.label ?? null);
   return { kind, label: bbLabel ?? STATUS_LABEL[kind] };
 }

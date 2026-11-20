@@ -99,10 +99,11 @@ export const ThreadRow = memo(function ThreadRow({
   const shortcut = useSidebarThreadShortcut(thread.id);
   const { splitProps } = useSidebarThreadSplit(thread.id);
   // bb's own resolver folds in drafts, collapsed children, and other plugins'
-  // row statuses, so this row reports exactly what bb's row would.
+  // row statuses, so this row starts from what bb's row would show.
   const resolved = resolveThreadStatus({ thread, hiddenThreads, hasUnsubmittedDraft, rowStatus });
-  // An unread row waits for live background work, as the counts and chips do.
-  const { kind, label } = rowState(resolved, [thread, ...hiddenThreads]);
+  // An unread row waits for its own live background work, as the counts and
+  // chips do; a collapsed sub-thread's work is not this thread's turn.
+  const { kind, label } = rowState(resolved, thread);
   // Another plugin's status replaces bb's glyph, so this list's tint would
   // disagree with what the row shows; the row stays plain then.
   const accent = resolved.rowStatus ? undefined : STATUS_ACCENT[kind];
